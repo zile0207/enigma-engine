@@ -9,8 +9,12 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@babel/parser": "^7.28.5",
+    "@babel/traverse": "^7.28.5",
+    "@babel/types": "^7.28.5",
     "@enigma/registry-schema": "workspace:^",
     "@enigma/theme": "workspace:^",
+    "magic-string": "^0.30.21",
     "next": "16.1.1",
     "react": "19.2.3",
     "react-dom": "19.2.3"

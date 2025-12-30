@@ -87,7 +87,28 @@ export default function DashboardPage() {
       );
     };
 
-    const handleMouseUp = () => {
+    const handleMouseUp = async () => {
+      if (!interaction.type || !selectedId) return;
+
+      // Get the element's final style values
+      const element = document.querySelector(
+        `[data-enigma-id="${selectedId}"]`
+      ) as HTMLElement;
+      if (element) {
+        const patch = {
+          width: element.style.width,
+          height: element.style.height,
+          top: element.style.top,
+          left: element.style.left,
+        };
+
+        // Send the patch to the server to persist in code
+        await fetch("/api/ai/vibe-code", {
+          method: "POST",
+          body: JSON.stringify({ selectedId, patch }),
+        });
+      }
+
       setInteraction({
         type: null,
         handle: null,
@@ -228,7 +249,13 @@ export default function DashboardPage() {
           {/* Component Instance */}
           <button
             data-enigma-id="button-001"
-            style={{ position: "absolute", top: "200px", left: "300px" }}
+            style={{
+      position: "absolute",
+      top: "205px",
+      left: "353px",
+      width: "383.344px",
+      height: "247px"
+    }}
             className="px-6 py-2 bg-black text-white rounded-md whitespace-nowrap"
           >
             <span data-enigma-id="text-001">Click Me</span>
