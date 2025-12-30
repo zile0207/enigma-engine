@@ -1,12 +1,14 @@
-export default function ComponentPage({
+export default async function ComponentPage({
   params,
 }: {
-  params: { registry_slug: string; component_slug: string };
+  params: Promise<{ registry_slug: string; component_slug: string }>;
 }) {
+  const { registry_slug, component_slug } = await params;
+
   return (
     <div>
-      <h1>Registry: {params.registry_slug}</h1>
-      <h2>Component: {params.component_slug}</h2>
+      <h1>Registry: {registry_slug}</h1>
+      <h2>Component: {component_slug}</h2>
       <p>Component documentation page</p>
     </div>
   );
