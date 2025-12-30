@@ -1,7 +1,9 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 
 export default function DashboardPage() {
+  const canvasRef = useRef<HTMLDivElement>(null);
+
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedElement, setSelectedElement] = useState<DOMRect | null>(null);
@@ -40,7 +42,7 @@ export default function DashboardPage() {
           setIsDragging(true);
           setDragHandle(handle);
         }}
-        className={`absolute w-3 h-3 bg-white border-2 border-blue-500 rounded-sm z-[60] ${
+        className={`handle-trigger absolute w-3 h-3 bg-white border-2 border-blue-500 rounded-sm z-[60] ${
           handle.includes("top")
             ? "-top-1.5"
             : handle.includes("bottom")
@@ -75,32 +77,43 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      // Case A: Handling Resize [Already built]
-      if (isDragging && selectedId && selectedElement) {
-        const element = document.querySelector(
-          `[data-enigma-id="${selectedId}"]`
-        ) as HTMLElement;
-        if (!element) return;
+      if (!selectedId || !selectedElement || !canvasRef.current) return;
 
-        // Calculate Deltas from the Mouse
+      const element = document.querySelector(
+        `[data-enigma-id="${selectedId}"]`
+      ) as HTMLElement;
+      if (!element) return;
+
+      const canvasRect = canvasRef.current.getBoundingClientRect();
+
+      // 1. Convert Mouse Viewport -> Canvas Local coordinates
+      const localMouseX = e.clientX - canvasRect.left;
+      const localMouseY = e.clientY - canvasRect.top;
+
+      // 2. Convert current Element Viewport -> Canvas Local coordinates
+      const localElemLeft = selectedElement.left - canvasRect.left;
+      const localElemTop = selectedElement.top - canvasRect.top;
+
+      // Case A: Handling Resize [Already built]
+      if (isDragging) {
         let newWidth = selectedElement.width;
         let newHeight = selectedElement.height;
         let newTop = selectedElement.top;
         let newLeft = selectedElement.left;
 
         if (dragHandle?.includes("right"))
-          newWidth = e.clientX - selectedElement.left;
+          newWidth = localMouseX - localElemLeft;
         if (dragHandle?.includes("bottom"))
-          newHeight = e.clientY - selectedElement.top;
+          newHeight = localMouseY - localElemTop;
 
-        // When dragging LEFT or TOP, we must move the element AND change its size
+        // Handle Left/Top (Changes size AND position)
         if (dragHandle?.includes("left")) {
-          newWidth = selectedElement.left + selectedElement.width - e.clientX;
-          newLeft = e.clientX;
+          newWidth = localElemLeft + selectedElement.width - localMouseX;
+          newLeft = localMouseX;
         }
         if (dragHandle?.includes("top")) {
-          newHeight = selectedElement.top + selectedElement.height - e.clientY;
-          newTop = e.clientY;
+          newHeight = localElemTop + selectedElement.height - localMouseY;
+          newTop = localMouseY;
         }
 
         // Apply to the Button directly for the 60fps "vibe"
@@ -109,8 +122,15 @@ export default function DashboardPage() {
         element.style.top = `${newTop}px`;
         element.style.left = `${newLeft}px`;
 
-        // Sync the Blue Box state
-        setSelectedElement(new DOMRect(newLeft, newTop, newWidth, newHeight));
+        // Update Blue Box (Always uses viewport coordinates for 'fixed' position)
+        setSelectedElement(
+          new DOMRect(
+            newLeft + canvasRect.left,
+            newTop + canvasRect.top,
+            newWidth,
+            newHeight
+          )
+        );
       }
 
       // Case B: Handling Movement (New!)
@@ -121,8 +141,8 @@ export default function DashboardPage() {
         if (!element) return;
 
         // Calculate new position based on current mouse and initial offset
-        const newLeft = e.clientX - dragOffset.x;
-        const newTop = e.clientY - dragOffset.y;
+        const newLeft = e.clientX - canvasRect.left - dragOffset.x;
+        const newTop = e.clientY - canvasRect.top - dragOffset.y;
 
         // Apply to DOM directly for 60fps movement
         element.style.left = `${newLeft}px`;
@@ -131,8 +151,8 @@ export default function DashboardPage() {
         // Sync the Blue Box overlay
         setSelectedElement(
           new DOMRect(
-            newLeft,
-            newTop,
+            newLeft + canvasRect.left,
+            newTop + canvasRect.top,
             selectedElement.width,
             selectedElement.height
           )
@@ -279,6 +299,7 @@ export default function DashboardPage() {
 
         {/* The Canvas (The "Framer" Area) */}
         <div
+          ref={canvasRef}
           onClick={handleCanvasClick}
           className="flex-1 relative bg-zinc-100 overflow-auto p-20"
         >
@@ -286,12 +307,12 @@ export default function DashboardPage() {
           {isEditMode && selectedElement && (
             <div
               onMouseDown={(e) => {
-                if (
-                  (e.target as HTMLElement).classList.contains("handle-trigger")
-                )
+                if ((e.target as HTMLElement).closest(".handle-trigger"))
                   return;
 
                 setIsMoving(true);
+
+                // Offset is distance from mouse click to blue box's top-left corner
                 setDragOffset({
                   x: e.clientX - selectedElement.left,
                   y: e.clientY - selectedElement.top,
