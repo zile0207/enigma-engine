@@ -24,3 +24,9 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* While dragging, force the cursor across the whole screen and prevent text selection */
+.is-dragging {
+  cursor: grabbing !important;
+  user-select: none !important;
+}
