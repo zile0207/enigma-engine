@@ -205,6 +205,18 @@ export default function DashboardPage() {
           >
             Main Button
           </div>
+          <div
+            onClick={() => {
+              const el = document.querySelector('[data-enigma-id="text-001"]');
+              if (el) {
+                setSelectedId("text-001");
+                setSelectedElement(el.getBoundingClientRect());
+              }
+            }}
+            className={`p-2 rounded cursor-pointer text-sm ml-4 ${selectedId === "text-001" ? "bg-blue-100 text-blue-600" : ""}`}
+          >
+            Click Me (Text)
+          </div>
         </div>
 
         {/* Canvas Area */}
@@ -219,7 +231,7 @@ export default function DashboardPage() {
             style={{ position: "absolute", top: "200px", left: "300px" }}
             className="px-6 py-2 bg-black text-white rounded-md whitespace-nowrap"
           >
-            Click Me
+            <span data-enigma-id="text-001">Click Me</span>
           </button>
 
           {/* Selection & Handle Overlay */}
