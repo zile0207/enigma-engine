@@ -1,150 +1,228 @@
 "use client";
 
-import { usePathname, useRouter } from "next/navigation";
-import { X, Plus } from "lucide-react";
-import { useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Home, Plus } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useTabStore, Tab } from "@/store/useTabStore";
 import { Button } from "@/components/ui/button";
-
-interface Tab {
-  label: string;
-  path: string;
-  closable: boolean;
-}
+import { X } from "lucide-react";
 
 export function TabBar() {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const { openTabs, activeTabId, openTab, closeTab, setActiveTab } =
+    useTabStore();
   const [showNewProject, setShowNewProject] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
 
-  // Extract tabs from pathname
-  const getTabs = (): Tab[] => {
-    const tabs: Tab[] = [
-      { label: "Home", path: "/zile/dashboard", closable: false },
-    ];
+  // Sync URL with active tab on mount and when it changes
+  useEffect(() => {
+    // Try to determine active tab from pathname first
+    const parts = pathname.split("/").filter(Boolean);
+    let expectedTabId: string | null = null;
 
-    if (pathname.startsWith("/zile")) {
-      if (pathname.includes("/dashboard")) {
-        const parts = pathname.split("/").filter(Boolean);
-
-        if (parts.length === 2 && parts[1] === "dashboard") {
-          // /zile/dashboard
-          tabs.push({
-            label: "Projects",
-            path: `/zile/dashboard`,
-            closable: true,
-          });
-        } else if (parts.length === 3 && parts[2]) {
-          // /zile/dashboard/project or /zile/dashboard/project/*
-          const project = parts[2];
-          tabs.push({
-            label: project,
-            path: `/zile/dashboard/${project}`,
-            closable: true,
-          });
-
-          if (parts.length > 3 && parts[3]) {
-            const sub = parts[3];
-            tabs.push({
-              label: `${sub.charAt(0).toUpperCase() + sub.slice(1)}`,
-              path: pathname,
-              closable: true,
-            });
-          }
-        }
-      }
+    // Check if we're on a project page
+    if (parts.length >= 3 && parts[1] === "dashboard") {
+      const project = parts[2];
+      expectedTabId = `project-${project}`;
+    } else if (parts.length === 2 && parts[1] === "dashboard") {
+      // On dashboard page
+      expectedTabId = "home";
     }
 
-    return tabs;
+    // Only update if different to avoid loops
+    if (expectedTabId && expectedTabId !== activeTabId) {
+      const tabExists = openTabs.some((tab) => tab.id === expectedTabId);
+      if (tabExists) {
+        setActiveTab(expectedTabId);
+      }
+    }
+  }, [pathname, activeTabId, openTabs, setActiveTab]);
+
+  // Navigate to home tab
+  const handleHomeClick = () => {
+    setActiveTab("home");
+    // Extract username from pathname and navigate to their dashboard
+    const parts = pathname.split("/").filter(Boolean);
+    if (parts.length >= 1) {
+      router.push(`/${parts[0]}/dashboard`);
+    } else {
+      router.push("/dashboard");
+    }
   };
 
-  const tabs = getTabs();
-  const activeTab = tabs.find((tab) => tab.path === pathname);
-
+  // Open new project tab
   const handleCreateProject = () => {
     if (newProjectName.trim()) {
-      router.push(`/zile/dashboard/${newProjectName}`);
+      const projectTab: Omit<Tab, "isDirty"> = {
+        id: `project-${Date.now()}`,
+        name: newProjectName,
+        type: "project",
+      };
+      openTab(projectTab);
       setNewProjectName("");
       setShowNewProject(false);
     }
   };
 
+  // Handle tab click
+  const handleTabClick = (tab: Tab) => {
+    // Just navigate - the URL sync effect will set the active tab
+    if (tab.path) {
+      router.push(tab.path);
+    }
+  };
+
+  // Handle closing a tab
+  const handleCloseTab = (tabId: string) => {
+    // Check if we're closing the active tab
+    const isActiveTab = activeTabId === tabId;
+
+    // Check if current URL matches the closed tab's path
+    const tab = openTabs.find((t) => t.id === tabId);
+    const isOnTabPage = tab?.path && pathname.startsWith(tab.path);
+
+    // Navigate to home if closing active tab or if we're on that page
+    if (isActiveTab || isOnTabPage) {
+      const parts = pathname.split("/").filter(Boolean);
+      if (parts.length >= 1) {
+        router.push(`/${parts[0]}/dashboard`);
+      } else {
+        router.push("/dashboard");
+      }
+    }
+
+    // Close the tab
+    closeTab(tabId);
+  };
+
+  // Handle middle-click to close tab
+  const handleTabMiddleClick = (tabId: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    handleCloseTab(tabId);
+  };
+
+  // Handle right-click for context menu (close others)
+  const handleTabRightClick = (tabId: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    // You could add a context menu here, for now we'll just close others
+    const { closeOtherTabs } = useTabStore.getState();
+    closeOtherTabs(tabId);
+  };
+
   return (
-    <div className="fixed top-0 left-0 right-0 h-10 bg-slate-100 border-b border-slate-200 flex items-center z-50">
-      <div className="flex items-center h-full flex-1">
-        {tabs.map((tab) => (
-          <button
-            key={tab.path}
-            onClick={() => router.push(tab.path)}
-            className={`
-              flex items-center gap-2 px-4 h-full text-sm font-medium
-              border-r border-slate-200 min-w-[120px] max-w-[200px]
-              hover:bg-slate-200 transition-colors
-              ${
-                activeTab?.path === tab.path
-                  ? "bg-white text-slate-900 border-b-2 border-b-transparent relative"
-                  : "text-slate-600"
-              }
-            `}
-          >
-            <span className="truncate">{tab.label}</span>
-            {tab.closable && (
-              <X
-                size={14}
-                className="opacity-0 group-hover:opacity-100 hover:bg-slate-300 rounded transition-opacity ml-1"
+    <div className="flex items-center h-10 bg-zinc-100 border-b border-zinc-200 select-none">
+      {/* Home Tab - Always present */}
+      <button
+        onClick={handleHomeClick}
+        className={`
+          flex items-center gap-2 px-4 h-full text-sm font-medium
+          border-r border-zinc-200
+          hover:bg-zinc-200 transition-colors relative
+          ${activeTabId === "home" ? "bg-white text-zinc-900" : "text-zinc-600"}
+        `}
+        data-tab-id="home"
+      >
+        <Home size={16} />
+      </button>
+
+      {/* Project Tabs - flex container that shrinks */}
+      <div className="flex-1 h-10 flex items-center overflow-hidden">
+        {openTabs
+          .filter((tab) => tab.type !== "home")
+          .map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => handleTabClick(tab)}
+              onAuxClick={(e) => {
+                // Middle click (button 1) closes tab
+                if (e.button === 1) {
+                  handleTabMiddleClick(tab.id, e);
+                }
+              }}
+              onContextMenu={(e) => handleTabRightClick(tab.id, e)}
+              className={`
+                group flex items-center gap-2 pl-4 pr-2 h-full text-sm font-medium
+                border-r border-zinc-200 hover:bg-zinc-200 transition-colors relative flex-shrink-0
+                ${activeTabId === tab.id ? "bg-white text-zinc-900" : "text-zinc-600"}
+              `}
+              data-tab-id={tab.id}
+            >
+              {/* Tab name */}
+              <span className="truncate">{tab.name}</span>
+
+              {/* Unsaved indicator */}
+              {tab.isDirty && (
+                <span className="absolute top-2 left-2 w-1.5 h-1.5 bg-orange-500 rounded-full" />
+              )}
+
+              {/* Close button */}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="opacity-0 group-hover:opacity-100 ml-1 flex-shrink-0 h-6 w-6 p-0"
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (tab.label === "Projects") {
-                    router.push("/zile/dashboard");
-                  } else {
-                    router.push("/zile/dashboard");
-                  }
+                  handleCloseTab(tab.id);
                 }}
-              />
-            )}
-          </button>
-        ))}
-      </div>
+              >
+                <X size={14} />
+              </Button>
+            </button>
+          ))}
 
-      {/* Plus button for new project */}
-      {showNewProject ? (
-        <div className="flex items-center gap-2 pr-4 h-full border-l border-slate-200 pl-4">
-          <input
-            type="text"
-            placeholder="Project name"
-            value={newProjectName}
-            onChange={(e) => setNewProjectName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                handleCreateProject();
-              } else if (e.key === "Escape") {
+        {/* Plus button for new project - always last after project tabs */}
+        {showNewProject ? (
+          <div className="flex items-center gap-2 pr-4 h-full border-l border-zinc-200 pl-4 flex-shrink-0">
+            <input
+              type="text"
+              placeholder="Project name"
+              value={newProjectName}
+              onChange={(e) => setNewProjectName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  handleCreateProject();
+                } else if (e.key === "Escape") {
+                  setShowNewProject(false);
+                  setNewProjectName("");
+                }
+              }}
+              className="px-3 py-1 text-sm border border-zinc-300 rounded w-48 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              autoFocus
+            />
+            <Button
+              onClick={handleCreateProject}
+              disabled={!newProjectName.trim()}
+              size="sm"
+            >
+              Create
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0"
+              onClick={() => {
                 setShowNewProject(false);
-              }
-            }}
-            className="px-3 py-1 text-sm border border-slate-300 rounded w-48"
-            autoFocus
-          />
+                setNewProjectName("");
+              }}
+            >
+              <X size={14} />
+            </Button>
+          </div>
+        ) : (
           <Button
+            variant="ghost"
             size="sm"
-            onClick={handleCreateProject}
-            disabled={!newProjectName.trim()}
+            className="h-full w-8 border-l border-zinc-200 rounded-none flex-shrink-0"
+            onClick={() => setShowNewProject(true)}
+            title="Create new project"
           >
-            Create
+            <Plus size={16} />
           </Button>
-          <X
-            size={16}
-            className="cursor-pointer hover:text-slate-600"
-            onClick={() => setShowNewProject(false)}
-          />
-        </div>
-      ) : (
-        <button
-          onClick={() => setShowNewProject(true)}
-          className="flex items-center justify-center w-8 h-8 border-l border-slate-200 hover:bg-slate-200 transition-colors ml-2"
-        >
-          <Plus size={16} className="text-slate-600" />
-        </button>
-      )}
+        )}
+      </div>
     </div>
   );
 }

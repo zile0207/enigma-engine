@@ -12,6 +12,20 @@ export default function ProjectDashboardPage({
   const [selectedElement, setSelectedElement] = useState<DOMRect | null>(null);
   const [projectName, setProjectName] = useState<string>("");
 
+  const [elementStyles, setElementStyles] = useState<Record<string, {
+    top: string;
+    left: string;
+    width: string;
+    height: string;
+  }>>({
+    "button-001": {
+      top: "137px",
+      left: "175px",
+      width: "177.297px",
+      height: "280px",
+    },
+  });
+
   const [interaction, setInteraction] = useState<{
     type: "moving" | "resizing" | null;
     handle: string | null;
@@ -29,6 +43,25 @@ export default function ProjectDashboardPage({
   useEffect(() => {
     params.then((p) => setProjectName(p.project));
   }, [params]);
+
+  const [elementPosition, setElementPosition] = useState<{
+    x: number;
+    y: number;
+    z: number;
+  } | null>(null);
+
+  useEffect(() => {
+    if (selectedId) {
+      const element = document.querySelector(
+        `[data-enigma-id="${selectedId}"]`
+      ) as HTMLElement;
+      if (element) {
+        setElementPosition(getParentPosition(element));
+      }
+    } else {
+      setElementPosition(null);
+    }
+  }, [selectedId]);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -87,6 +120,18 @@ export default function ProjectDashboardPage({
           newHeight
         )
       );
+
+      setElementPosition(getParentPosition(element));
+
+      setElementStyles((prev) => ({
+        ...prev,
+        [selectedId]: {
+          top: `${newTop}px`,
+          left: `${newLeft}px`,
+          width: `${newWidth}px`,
+          height: `${newHeight}px`,
+        },
+      }));
     };
 
     const handleMouseUp = async () => {
@@ -154,6 +199,20 @@ export default function ProjectDashboardPage({
     }
   };
 
+  const getParentPosition = (element: HTMLElement) => {
+    const parent = element.parentElement;
+    if (!parent) return { x: 0, y: 0, z: 0 };
+
+    const childRect = element.getBoundingClientRect();
+    const parentRect = parent.getBoundingClientRect();
+
+    return {
+      x: Math.round(childRect.left - parentRect.left),
+      y: Math.round(childRect.top - parentRect.top),
+      z: parseInt(window.getComputedStyle(element).zIndex) || 0,
+    };
+  };
+
   const renderHandles = () => {
     const handles = [
       "top-left",
@@ -189,31 +248,6 @@ export default function ProjectDashboardPage({
     <div
       className={`h-screen w-full flex flex-col ${isEditMode ? "bg-slate-900" : "bg-slate-50"}`}
     >
-      <div className="h-16 border-b border-slate-200 bg-white flex items-center justify-between px-6 shadow-sm z-10">
-        <div className="flex items-center gap-4">
-          <h1 className="text-sm font-semibold text-slate-700 tracking-wide">
-            Enigma Engine
-          </h1>
-          <span className="text-slate-300">/</span>
-          <span className="text-sm font-medium text-slate-900">
-            {projectName || selectedId ? selectedId : "Dashboard"}
-          </span>
-        </div>
-        <button
-          onClick={() => {
-            setIsEditMode(!isEditMode);
-            setSelectedId(null);
-          }}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-            isEditMode
-              ? "bg-slate-100 text-slate-700 hover:bg-slate-200"
-              : "bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-500/20"
-          }`}
-        >
-          {isEditMode ? "Exit Edit Mode" : "Enter Edit Mode"}
-        </button>
-      </div>
-
       <div className="flex-1 flex overflow-hidden">
         <div className="w-72 border-r border-slate-200 bg-white flex flex-col">
           <div className="p-4 border-b border-slate-100">
@@ -255,6 +289,39 @@ export default function ProjectDashboardPage({
                 Main Button
               </span>
             </div>
+            <div
+              onClick={() => {
+                const el = document.querySelector(
+                  '[data-enigma-id="text-001"]'
+                );
+                if (el) {
+                  setSelectedId("text-001");
+                  setSelectedElement(el.getBoundingClientRect());
+                }
+              }}
+              className={`group flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-all ml-6 ${
+                selectedId === "text-001"
+                  ? "bg-blue-50 border border-blue-200"
+                  : "hover:bg-slate-50 border border-transparent"
+              }`}
+            >
+              <div
+                className={`w-2 h-2 rounded-full ${
+                  selectedId === "text-001"
+                    ? "bg-blue-500"
+                    : "bg-slate-300 group-hover:bg-slate-400"
+                }`}
+              />
+              <span
+                className={`text-sm ${
+                  selectedId === "text-001"
+                    ? "text-blue-700 font-medium"
+                    : "text-slate-600"
+                }`}
+              >
+                Text
+              </span>
+            </div>
           </div>
         </div>
 
@@ -269,7 +336,13 @@ export default function ProjectDashboardPage({
         >
           <button
             data-enigma-id="button-001"
-            style={{
+            style={elementStyles["button-001"] ? {
+              position: "absolute",
+              top: elementStyles["button-001"].top,
+              left: elementStyles["button-001"].left,
+              width: elementStyles["button-001"].width,
+              height: elementStyles["button-001"].height,
+            } : {
               position: "absolute",
               top: "137px",
               left: "175px",
@@ -299,12 +372,64 @@ export default function ProjectDashboardPage({
         </div>
 
         <div className="w-80 border-l border-slate-200 bg-white flex flex-col">
+          <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+            <div>
+              <h1 className="text-sm font-semibold text-slate-700 tracking-wide">
+                Enigma Engine
+              </h1>
+              <span className="text-xs text-slate-400">
+                / {projectName || "Project"}
+              </span>
+            </div>
+            <button
+              onClick={() => {
+                setIsEditMode(!isEditMode);
+                setSelectedId(null);
+              }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                isEditMode
+                  ? "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                  : "bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-500/20"
+              }`}
+            >
+              {isEditMode ? "Exit" : "Edit"}
+            </button>
+          </div>
           <div className="p-4 border-b border-slate-100">
             <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
               Properties
             </h2>
           </div>
           <div className="flex-1 p-4 space-y-4 overflow-y-auto">
+            <div>
+              <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                Position
+              </label>
+              <div className="mt-3 space-y-2">
+                <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200">
+                  <span className="text-xs text-slate-500">
+                    X (from parent)
+                  </span>
+                  <span className="text-sm font-mono text-slate-700 font-medium">
+                    {elementPosition ? `${elementPosition.x}px` : "-"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200">
+                  <span className="text-xs text-slate-500">
+                    Y (from parent)
+                  </span>
+                  <span className="text-sm font-mono text-slate-700 font-medium">
+                    {elementPosition ? `${elementPosition.y}px` : "-"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200">
+                  <span className="text-xs text-slate-500">Z Index</span>
+                  <span className="text-sm font-mono text-slate-700 font-medium">
+                    {elementPosition ? elementPosition.z : "-"}
+                  </span>
+                </div>
+              </div>
+            </div>
             <div>
               <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
                 CSS Properties

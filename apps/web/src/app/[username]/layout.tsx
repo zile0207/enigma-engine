@@ -1,5 +1,3 @@
-import { TabBar } from "@/components/tab-bar";
-
 export default async function UsernameLayout({
   children,
   params,
@@ -10,11 +8,9 @@ export default async function UsernameLayout({
   const { username } = await params;
 
   return (
-    <>
-      <TabBar />
-
+    <div className="min-h-screen">
       {/* Main Content Wrapper */}
-      <div className="mt-10 min-h-screen">{children}</div>
-    </>
+      {children}
+    </div>
   );
 }

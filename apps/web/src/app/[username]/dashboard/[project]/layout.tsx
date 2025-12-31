@@ -1,20 +1,35 @@
-import { TabBar } from "@/components/tab-bar";
+"use client";
 
-export default async function ProjectLayout({
+import { TabLayout } from "@/components/tab-layout";
+import { useTabStore } from "@/store/useTabStore";
+import { useEffect } from "react";
+import { usePathname } from "next/navigation";
+
+export default function ProjectLayout({
   children,
   params,
-}: Readonly<{
+}: {
   children: React.ReactNode;
   params: Promise<{ username: string; project: string }>;
-}>) {
-  const { username, project } = await params;
+}) {
+  const openTab = useTabStore((state) => state.openTab);
+  const setActiveTab = useTabStore((state) => state.setActiveTab);
+  const pathname = usePathname();
 
-  return (
-    <>
-      <TabBar />
+  useEffect(() => {
+    // Open the project tab when this layout is loaded
+    params.then(({ username, project }) => {
+      const tabId = `project-${project}`;
+      openTab({
+        id: tabId,
+        name: project,
+        type: "project",
+        path: `/${username}/dashboard/${project}`,
+      });
+      // Set as active tab
+      setActiveTab(tabId);
+    });
+  }, [openTab, setActiveTab, params]);
 
-      {/* Main Content Wrapper */}
-      <div className="mt-10 min-h-screen">{children}</div>
-    </>
-  );
+  return <TabLayout>{children}</TabLayout>;
 }
