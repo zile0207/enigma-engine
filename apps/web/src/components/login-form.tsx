@@ -21,7 +21,7 @@ export function LoginForm({
     setError("");
 
     if (username === "zile" && password === "123") {
-      router.push("/dashboard/spotify");
+      router.push(`/${username}/dashboard`);
     } else {
       setError("Invalid username or password");
     }
@@ -45,7 +45,7 @@ export function LoginForm({
           <Input
             id="username"
             type="text"
-            placeholder="zile"
+            placeholder="Enter username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             required
@@ -56,6 +56,7 @@ export function LoginForm({
           <Input
             id="password"
             type="password"
+            placeholder="Enter password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
