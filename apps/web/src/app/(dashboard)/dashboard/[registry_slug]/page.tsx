@@ -275,9 +275,9 @@ export default function DashboardPage() {
             data-enigma-id="button-001"
             style={{
       position: "absolute",
-      top: "143px",
-      left: "113px",
-      width: "536.297px",
+      top: "137px",
+      left: "175px",
+      width: "177.297px",
       height: "280px"
     }}
             className="px-6 py-2 bg-slate-900 text-white rounded-lg whitespace-nowrap shadow-lg shadow-slate-900/20"
