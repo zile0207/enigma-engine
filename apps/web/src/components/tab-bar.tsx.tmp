@@ -56,14 +56,15 @@ export function TabBar() {
   // Open new project tab
   const handleCreateProject = () => {
     if (newProjectName.trim()) {
-      // Create a URL-safe slug from the project name for the ID
+      // Create a URL-safe slug from project name for ID
       const slug = newProjectName
         .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/(^-|-$)/g, "");
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '');
+
       // Validate slug is non-empty
       if (!slug) {
-        alert("Project name must contain at least one letter or number");
+        alert('Project name must contain at least one letter or number');
         return;
       }
 
@@ -71,7 +72,7 @@ export function TabBar() {
         id: `project-${slug}`,
         name: newProjectName,
         type: "project",
-        path: `/${pathname.split("/")[1]}/dashboard/${slug}`,
+        path: `/${pathname.split('/')[1]}/dashboard/${slug}`,
       };
       openTab(projectTab);
       setNewProjectName("");

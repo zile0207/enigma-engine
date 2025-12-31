@@ -12,12 +12,17 @@ export default function ProjectDashboardPage({
   const [selectedElement, setSelectedElement] = useState<DOMRect | null>(null);
   const [projectName, setProjectName] = useState<string>("");
 
-  const [elementStyles, setElementStyles] = useState<Record<string, {
-    top: string;
-    left: string;
-    width: string;
-    height: string;
-  }>>({
+  const [elementStyles, setElementStyles] = useState<
+    Record<
+      string,
+      {
+        top: string;
+        left: string;
+        width: string;
+        height: string;
+      }
+    >
+  >({
     "button-001": {
       top: "137px",
       left: "175px",
@@ -39,15 +44,25 @@ export default function ProjectDashboardPage({
   });
 
   const canvasRef = useRef<HTMLDivElement>(null);
+  const paramsRef =
+    useRef<Promise<{ username: string; project: string }>>(params);
 
   useEffect(() => {
-    params.then((p) => setProjectName(p.project));
+    paramsRef.current = params;
+
+    params.then((p) => {
+      // Only process if this is still the current params promise
+      if (paramsRef.current === params) {
+        setProjectName(p.project);
+      }
+    });
   }, [params]);
 
   const [elementPosition, setElementPosition] = useState<{
     x: number;
     y: number;
     z: number;
+    isNested: boolean;
   } | null>(null);
 
   useEffect(() => {
@@ -121,7 +136,13 @@ export default function ProjectDashboardPage({
         )
       );
 
-      setElementPosition(getParentPosition(element));
+      // Calculate position directly instead of querying DOM
+      setElementPosition({
+        x: Math.round(newLeft),
+        y: Math.round(newTop),
+        z: parseInt(window.getComputedStyle(element).zIndex) || 0,
+        isNested: false,
+      });
 
       setElementStyles((prev) => ({
         ...prev,
@@ -201,16 +222,34 @@ export default function ProjectDashboardPage({
 
   const getParentPosition = (element: HTMLElement) => {
     const parent = element.parentElement;
-    if (!parent) return { x: 0, y: 0, z: 0 };
+    if (!parent) return { x: 0, y: 0, z: 0, isNested: false };
 
     const childRect = element.getBoundingClientRect();
     const parentRect = parent.getBoundingClientRect();
 
-    return {
-      x: Math.round(childRect.left - parentRect.left),
-      y: Math.round(childRect.top - parentRect.top),
-      z: parseInt(window.getComputedStyle(element).zIndex) || 0,
-    };
+    // Check if parent is the canvas (not nested) or another element (nested)
+    const isCanvas = parent.id === "canvas" || parent === canvasRef.current;
+
+    if (isCanvas) {
+      // Top-level element in canvas - show canvas coordinates
+      const canvasRect = canvasRef.current?.getBoundingClientRect();
+      if (!canvasRect) return { x: 0, y: 0, z: 0, isNested: false };
+
+      return {
+        x: Math.round(childRect.left - canvasRect.left),
+        y: Math.round(childRect.top - canvasRect.top),
+        z: parseInt(window.getComputedStyle(element).zIndex) || 0,
+        isNested: false,
+      };
+    } else {
+      // Nested element - show parent-relative coordinates
+      return {
+        x: Math.round(childRect.left - parentRect.left),
+        y: Math.round(childRect.top - parentRect.top),
+        z: parseInt(window.getComputedStyle(element).zIndex) || 0,
+        isNested: true,
+      };
+    }
   };
 
   const renderHandles = () => {
@@ -326,6 +365,7 @@ export default function ProjectDashboardPage({
         </div>
 
         <div
+          id="canvas"
           ref={canvasRef}
           onMouseDown={handleCanvasMouseDown}
           className={`flex-1 relative overflow-hidden bg-slate-50 ${
@@ -336,19 +376,23 @@ export default function ProjectDashboardPage({
         >
           <button
             data-enigma-id="button-001"
-            style={elementStyles["button-001"] ? {
-              position: "absolute",
-              top: elementStyles["button-001"].top,
-              left: elementStyles["button-001"].left,
-              width: elementStyles["button-001"].width,
-              height: elementStyles["button-001"].height,
-            } : {
-              position: "absolute",
-              top: "137px",
-              left: "175px",
-              width: "177.297px",
-              height: "280px",
-            }}
+            style={
+              elementStyles["button-001"]
+                ? {
+                    position: "absolute",
+                    top: elementStyles["button-001"].top,
+                    left: elementStyles["button-001"].left,
+                    width: elementStyles["button-001"].width,
+                    height: elementStyles["button-001"].height,
+                  }
+                : {
+                    position: "absolute",
+                    top: "137px",
+                    left: "175px",
+                    width: "177.297px",
+                    height: "280px",
+                  }
+            }
             className="px-6 py-2 bg-slate-900 text-white rounded-lg whitespace-nowrap shadow-lg shadow-slate-900/20"
           >
             <span data-enigma-id="text-001">Click Me</span>
@@ -408,7 +452,8 @@ export default function ProjectDashboardPage({
               <div className="mt-3 space-y-2">
                 <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200">
                   <span className="text-xs text-slate-500">
-                    X (from parent)
+                    X ({elementPosition?.isNested ? "from parent" : "on canvas"}
+                    )
                   </span>
                   <span className="text-sm font-mono text-slate-700 font-medium">
                     {elementPosition ? `${elementPosition.x}px` : "-"}
@@ -416,7 +461,8 @@ export default function ProjectDashboardPage({
                 </div>
                 <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200">
                   <span className="text-xs text-slate-500">
-                    Y (from parent)
+                    Y ({elementPosition?.isNested ? "from parent" : "on canvas"}
+                    )
                   </span>
                   <span className="text-sm font-mono text-slate-700 font-medium">
                     {elementPosition ? `${elementPosition.y}px` : "-"}
