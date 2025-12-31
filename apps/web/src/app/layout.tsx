@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Navbar } from "@/components/navbar";
-import { Badge } from "@/components/ui/badge";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -33,19 +32,12 @@ export default function RootLayout({
           links={[
             { href: "/dashboard/spotify", label: "Dashboard" },
             { href: "/spotify/button", label: "Registry" },
+            { href: "/spotify/button", label: "Theme" },
           ]}
-          rightContent={
-            <Badge
-              variant="secondary"
-              className="text-[10px] font-bold uppercase tracking-widest"
-            >
-              v0.1.0-alpha
-            </Badge>
-          }
         />
 
         {/* Main Content Wrapper */}
-        <div className="pt-16 min-h-screen">{children}</div>
+        <div className="mt-14 min-h-screen">{children}</div>
       </body>
     </html>
   );
