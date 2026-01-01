@@ -55,12 +55,7 @@
     --chart-4: var(--color-violet-400);
     --chart-5: var(--color-rose-400);
   }
-}
 
-@layer base {
-  * {
-    @apply border-border;
-  }
   body {
     @apply bg-background text-foreground;
   }
@@ -89,10 +84,4 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --radius: var(--radius);
-}
-
-/* While dragging, force the cursor across the whole screen and prevent text selection */
-.is-dragging {
-  cursor: grabbing !important;
-  user-select: none !important;
 }

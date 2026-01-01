@@ -4,7 +4,6 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Home, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTabStore, Tab } from "@/store/useTabStore";
-import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 
 export function TabBar() {
@@ -56,7 +55,7 @@ export function TabBar() {
   // Open new project tab
   const handleCreateProject = () => {
     if (newProjectName.trim()) {
-      // Create a URL-safe slug from the project name for the ID
+      // Create a URL-safe slug from the project name for ID
       const slug = newProjectName
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-")
@@ -81,7 +80,7 @@ export function TabBar() {
 
   // Handle tab click
   const handleTabClick = (tab: Tab) => {
-    // Just navigate - the URL sync effect will set the active tab
+    // Just navigate - URL sync effect will set as active tab
     if (tab.path) {
       router.push(tab.path);
     }
@@ -145,7 +144,7 @@ export function TabBar() {
         {openTabs
           .filter((tab) => tab.type !== "home")
           .map((tab) => (
-            <button
+            <div
               key={tab.id}
               onClick={() => handleTabClick(tab)}
               onAuxClick={(e) => {
@@ -155,9 +154,17 @@ export function TabBar() {
                 }
               }}
               onContextMenu={(e) => handleTabRightClick(tab.id, e)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  handleTabClick(tab);
+                }
+              }}
               className={`
                 group flex items-center gap-2 pl-4 pr-2 h-full text-sm font-medium
-                border-r border-zinc-200 hover:bg-zinc-200 transition-colors relative flex-shrink-0
+                border-r border-zinc-200 hover:bg-zinc-200 transition-colors relative flex-shrink-0 cursor-pointer
                 ${activeTabId === tab.id ? "bg-white text-zinc-900" : "text-zinc-600"}
               `}
               data-tab-id={tab.id}
@@ -171,18 +178,16 @@ export function TabBar() {
               )}
 
               {/* Close button */}
-              <Button
-                variant="ghost"
-                size="sm"
-                className="opacity-0 group-hover:opacity-100 ml-1 flex-shrink-0 h-6 w-6 p-0"
+              <div
+                className="opacity-0 group-hover:opacity-100 ml-1 flex-shrink-0 h-6 w-6 p-0 flex items-center justify-center hover:bg-zinc-300 rounded transition-colors cursor-pointer"
                 onClick={(e) => {
                   e.stopPropagation();
                   handleCloseTab(tab.id);
                 }}
               >
                 <X size={14} />
-              </Button>
-            </button>
+              </div>
+            </div>
           ))}
 
         {/* Plus button for new project - always last after project tabs */}
@@ -204,35 +209,31 @@ export function TabBar() {
               className="px-3 py-1 text-sm border border-zinc-300 rounded w-48 focus:outline-none focus:ring-2 focus:ring-blue-500"
               autoFocus
             />
-            <Button
+            <button
               onClick={handleCreateProject}
               disabled={!newProjectName.trim()}
-              size="sm"
+              className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all disabled:opacity-50"
             >
               Create
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 w-6 p-0"
+            </button>
+            <button
+              className="h-6 w-6 p-0 flex items-center justify-center hover:bg-zinc-100 rounded transition-colors cursor-pointer"
               onClick={() => {
                 setShowNewProject(false);
                 setNewProjectName("");
               }}
             >
               <X size={14} />
-            </Button>
+            </button>
           </div>
         ) : (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-full w-8 border-l border-zinc-200 rounded-none flex-shrink-0"
+          <button
+            className="h-full w-8 border-l border-zinc-200 rounded-none flex-shrink-0 flex items-center justify-center hover:bg-zinc-100 transition-colors cursor-pointer"
             onClick={() => setShowNewProject(true)}
             title="Create new project"
           >
             <Plus size={16} />
-          </Button>
+          </button>
         )}
       </div>
     </div>
